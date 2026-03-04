@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SHOP — Личный кабинет</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- УВЕДОМЛЕНИЯ -->
+  <div id="notifications" class="notifications" aria-live="polite"></div>
+
+  <!-- ХЕДЕР -->
+  <header class="header" role="banner">
+    <div class="header__inner">
+      <a href="index.html" class="header__logo">SH<span>O</span>P</a>
+
+      <div class="header__search" role="search" style="visibility:hidden"></div>
+
+      <nav class="header__nav" aria-label="Навигация">
+        <a href="index.html" class="header__nav-btn" aria-label="Каталог">
+          🏠 <span>Каталог</span>
+        </a>
+        <a href="cart.html" class="header__nav-btn" aria-label="Корзина">
+          🛒 <span>Корзина</span>
+          <span class="header__cart-count">0</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ОСНОВНОЙ КОНТЕНТ -->
+  <main class="profile-page" role="main">
+    <h1 class="profile-page__title">Мои заказы</h1>
+
+    <div class="orders-table-wrap">
+      <table class="orders-table" aria-label="Таблица заказов">
+        <thead>
+          <tr>
+            <th scope="col">№</th>
+            <th scope="col">Дата заказа</th>
+            <th scope="col">Состав</th>
+            <th scope="col">Сумма</th>
+            <th scope="col">Дата доставки</th>
+            <th scope="col">Интервал</th>
+            <th scope="col">Действия</th>
+          </tr>
+        </thead>
+        <tbody id="orders-tbody">
+          <tr>
+            <td colspan="7" class="orders-empty">
+              <div class="loader"><div class="loader__spinner"></div></div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+
+  <!-- ===== МОДАЛЬНОЕ ОКНО: ПРОСМОТР ===== -->
+  <div id="modal-view" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="view-modal-title">
+    <div class="modal">
+      <div class="modal__header">
+        <h2 class="modal__title" id="view-modal-title">Заказ</h2>
+        <button class="modal__close" onclick="closeAllModals()" aria-label="Закрыть">×</button>
+      </div>
+      <div class="modal__body" id="view-modal-content">
+        <!-- Заполняется динамически -->
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn--secondary" onclick="closeAllModals()">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ===== МОДАЛЬНОЕ ОКНО: РЕДАКТИРОВАНИЕ ===== -->
+  <div id="modal-edit" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+    <div class="modal">
+      <div class="modal__header">
+        <h2 class="modal__title" id="edit-modal-title">Редактирование заказа</h2>
+        <button class="modal__close" onclick="closeAllModals()" aria-label="Закрыть">×</button>
+      </div>
+      <div class="modal__body">
+
+        <div class="form-group">
+          <label for="edit-name">Имя *</label>
+          <input type="text" id="edit-name" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-email">Email *</label>
+          <input type="email" id="edit-email" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-phone">Телефон *</label>
+          <input type="tel" id="edit-phone" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-check">
+            <input type="checkbox" id="edit-subscribe">
+            Получать рассылку
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-address">Адрес доставки *</label>
+          <input type="text" id="edit-address" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-delivery-date">Дата доставки</label>
+          <input type="date" id="edit-delivery-date" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="edit-interval">Интервал доставки</label>
+          <select id="edit-interval" class="form-control">
+            <option value="">Выберите интервал</option>
+            <option value="08:00-12:00">08:00 – 12:00</option>
+            <option value="12:00-14:00">12:00 – 14:00</option>
+            <option value="14:00-18:00">14:00 – 18:00</option>
+            <option value="18:00-22:00">18:00 – 22:00</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-comment">Комментарий</label>
+          <textarea id="edit-comment" class="form-control"></textarea>
+        </div>
+
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn--secondary" onclick="closeAllModals()">Отмена</button>
+        <button class="btn btn--primary" onclick="saveEditOrder()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ===== МОДАЛЬНОЕ ОКНО: УДАЛЕНИЕ ===== -->
+  <div id="modal-delete" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+    <div class="modal">
+      <div class="modal__header">
+        <h2 class="modal__title" id="delete-modal-title">Подтверждение</h2>
+        <button class="modal__close" onclick="closeAllModals()" aria-label="Закрыть">×</button>
+      </div>
+      <div class="modal__body">
+        <p>Вы уверены, что хотите удалить заказ? Это действие нельзя отменить.</p>
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn--secondary" onclick="closeAllModals()">Нет</button>
+        <button class="btn btn--danger" onclick="confirmDeleteOrder()">Да, удалить</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- СКРИПТЫ -->
+  <script src="js/api.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/profile.js"></script>
+
+</body>
+</html>

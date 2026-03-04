@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SHOP — Корзина</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ХЕДЕР -->
+  <header class="header" role="banner">
+    <div class="header__inner">
+      <a href="index.html" class="header__logo">SH<span>O</span>P</a>
+      <div class="header__search" style="visibility:hidden"></div>
+      <nav class="header__nav" aria-label="Навигация">
+        <a href="index.html" class="header__nav-btn" aria-label="Каталог">🏠 <span>Каталог</span></a>
+        <a href="profile.html" class="header__nav-btn" aria-label="Личный кабинет">👤 <span>Кабинет</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- УВЕДОМЛЕНИЯ -->
+  <div id="notifications" class="notifications" aria-live="polite"></div>
+
+  <!-- КОНТЕНТ -->
+  <main class="cart-page" role="main">
+
+    <!-- ЛЕВАЯ ЧАСТЬ: ТОВАРЫ -->
+    <section aria-label="Товары в корзине">
+      <h1 class="cart-section__title">Корзина</h1>
+
+      <div id="cart-empty" class="cart__empty hidden">
+        <div class="cart__empty-icon">🛒</div>
+        <p>Корзина пуста.<br>
+          <a href="index.html">Перейдите в каталог</a>, чтобы добавить товары.
+        </p>
+      </div>
+
+      <div id="cart-grid" class="cart__grid">
+        <div class="loader"><div class="loader__spinner"></div></div>
+      </div>
+    </section>
+
+    <!-- ПРАВАЯ ЧАСТЬ: ФОРМА ЗАКАЗА -->
+    <aside>
+      <div class="order-form">
+        <h2 class="order-form__title">Оформление заказа</h2>
+
+        <div class="form-group">
+          <label for="order-name">Полное имя *</label>
+          <input type="text" id="order-name" class="form-control" placeholder="Иванов Иван Иванович" required>
+        </div>
+
+        <div class="form-group">
+          <label for="order-email">Email *</label>
+          <input type="email" id="order-email" class="form-control" placeholder="ivan@mail.ru" required>
+        </div>
+
+        <div class="form-group">
+          <label for="order-phone">Телефон *</label>
+          <input type="tel" id="order-phone" class="form-control" placeholder="+7 (999) 123-45-67" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-check">
+            <input type="checkbox" id="order-subscribe">
+            Получать рассылку
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label for="order-address">Адрес доставки *</label>
+          <input type="text" id="order-address" class="form-control" placeholder="г. Москва, ул. Ленина, д. 1" required>
+        </div>
+
+        <div class="form-group">
+          <label for="order-date">Дата доставки *</label>
+          <input type="date" id="order-date" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="order-interval">Время доставки *</label>
+          <select id="order-interval" class="form-control" required>
+            <option value="">Выберите интервал</option>
+            <option value="08:00-12:00">08:00 – 12:00</option>
+            <option value="12:00-14:00">12:00 – 14:00</option>
+            <option value="14:00-18:00">14:00 – 18:00</option>
+            <option value="18:00-22:00">18:00 – 22:00</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="order-comment">Комментарий</label>
+          <textarea id="order-comment" class="form-control" placeholder="Дополнительные пожелания..."></textarea>
+        </div>
+
+        <!-- Итог -->
+        <div class="order-summary">
+          <div class="order-summary__row">
+            <span>Товары</span>
+            <span id="summary-goods">0 ₽</span>
+          </div>
+          <div class="order-summary__row">
+            <span>Доставка</span>
+            <span id="summary-delivery">200 ₽</span>
+          </div>
+          <div class="order-summary__total">
+            <span>Итого</span>
+            <span id="summary-total">200 ₽</span>
+          </div>
+        </div>
+
+        <button id="submit-order" class="order-form__submit">Оформить заказ</button>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- ФУТЕР -->
+  <footer class="footer" role="contentinfo">
+    <div class="footer__inner">
+      <span>© 2025 Название компании</span>
+      <span class="footer__contacts">info@shop.ru · +7 (495) 000-00-00</span>
+    </div>
+  </footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/notifications.js"></script>
+  <script>
+    /**
+     * Логика страницы корзины
+     */
+
+    const fmt = (n) => `${Number(n).toLocaleString('ru-RU')} ₽`;
+
+    const renderStars = (r) => {
+      const f = Math.round(Number(r));
+      return '★'.repeat(Math.max(0,f)) + '☆'.repeat(Math.max(0,5-f));
+    };
+
+    let cartGoods = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      updateCartCounter();
+
+      // Минимальная дата — завтра (сегодня обычно не принимают)
+      const dateInput = document.getElementById('order-date');
+      if (dateInput) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        dateInput.min = tomorrow.toISOString().split('T')[0];
+      }
+
+      document.getElementById('order-date')?.addEventListener('change', updateSummary);
+      document.getElementById('order-interval')?.addEventListener('change', updateSummary);
+
+      await loadCartGoods();
+      document.getElementById('submit-order')?.addEventListener('click', submitOrder);
+    });
+
+    // Загрузить данные товаров из корзины
+    const loadCartGoods = async () => {
+      const ids   = getCart();
+      const grid  = document.getElementById('cart-grid');
+      const empty = document.getElementById('cart-empty');
+
+      if (ids.length === 0) {
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+        updateSummary();
+        return;
+      }
+
+      grid.innerHTML = '<div class="loader"><div class="loader__spinner"></div></div>';
+
+      try {
+        cartGoods = await Promise.all(ids.map(id => getGoodById(id)));
+        renderCartGoods(cartGoods);
+        updateSummary();
+      } catch {
+        grid.innerHTML = '<p class="text-muted" style="padding:20px">Не удалось загрузить товары корзины</p>';
+        showNotification('Ошибка загрузки корзины', 'error');
+      }
+    };
+
+    // Отрисовать карточки в корзине
+    const renderCartGoods = (goods) => {
+      const grid = document.getElementById('cart-grid');
+      grid.innerHTML = '';
+
+      goods.forEach((good) => {
+        const price = (good.discount_price && good.discount_price < good.actual_price)
+          ? good.discount_price : good.actual_price;
+
+        const card = document.createElement('article');
+        card.className = 'cart-card';
+        card.dataset.id = good.id;
+
+        // image_url — правильное поле из API
+        const imgHtml = good.image_url
+          ? `<img class="cart-card__image" src="${good.image_url}" alt="${good.name}"
+               loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+             <div class="cart-card__image-placeholder" style="display:none">🖼<br>Нет фото</div>`
+          : `<div class="cart-card__image-placeholder">🖼<br>Нет фото</div>`;
+
+        card.innerHTML = `
+          <div class="cart-card__image-wrap">${imgHtml}</div>
+          <div class="cart-card__body">
+            <h3 class="cart-card__name" title="${good.name}">${good.name}</h3>
+            <div class="product-card__rating">
+              <span class="product-card__rating-value">${Number(good.rating).toFixed(1)}</span>
+              <span class="stars">${renderStars(good.rating)}</span>
+            </div>
+            <div class="cart-card__price">${fmt(price)}</div>
+            <button class="cart-card__remove" data-id="${good.id}" aria-label="Удалить">🗑 Удалить</button>
+          </div>
+        `;
+
+        card.querySelector('.cart-card__remove').addEventListener('click', () => {
+          removeFromCart(good.id);
+          cartGoods = cartGoods.filter(g => g.id !== good.id);
+          card.remove();
+          if (cartGoods.length === 0) {
+            document.getElementById('cart-empty').classList.remove('hidden');
+          }
+          updateSummary();
+          showNotification(`«${good.name.substring(0,40)}» удалён из корзины`, 'info');
+        });
+
+        grid.appendChild(card);
+      });
+    };
+
+    // Пересчитать итог
+    const updateSummary = () => {
+      const goodsTotal = cartGoods.reduce((sum, g) => {
+        const p = (g.discount_price && g.discount_price < g.actual_price)
+          ? g.discount_price : g.actual_price;
+        return sum + p;
+      }, 0);
+
+      const date     = document.getElementById('order-date')?.value;
+      const interval = document.getElementById('order-interval')?.value;
+      const delivery = calcDelivery(date, interval);
+
+      document.getElementById('summary-goods').textContent    = fmt(goodsTotal);
+      document.getElementById('summary-delivery').textContent = fmt(delivery);
+      document.getElementById('summary-total').textContent    = fmt(goodsTotal + delivery);
+    };
+
+    // Стоимость доставки:
+    // Базово 200 ₽
+    // Вечерний интервал (18:00-22:00) в будни: +200 ₽
+    // Выходные (сб/вс): +300 ₽
+    const calcDelivery = (dateStr, interval) => {
+      let base = 200;
+      if (!dateStr) return base;
+      const d = new Date(dateStr);
+      const dow = d.getDay(); // 0=вс, 6=сб
+      const isWeekend = dow === 0 || dow === 6;
+      if (isWeekend) return base + 300;
+      if (interval === '18:00-22:00') return base + 200;
+      return base;
+    };
+
+    // Оформить заказ
+    const submitOrder = async () => {
+      if (cartGoods.length === 0) {
+        showNotification('Корзина пуста!', 'error');
+        return;
+      }
+
+      // Собираем значения полей
+      const full_name        = document.getElementById('order-name')?.value.trim();
+      const email            = document.getElementById('order-email')?.value.trim();
+      const phone            = document.getElementById('order-phone')?.value.trim();
+      const delivery_address = document.getElementById('order-address')?.value.trim();
+      const dateRaw          = document.getElementById('order-date')?.value;      // YYYY-MM-DD
+      const delivery_interval= document.getElementById('order-interval')?.value;
+      const comment          = document.getElementById('order-comment')?.value.trim();
+      const subscribe        = document.getElementById('order-subscribe')?.checked ? 1 : 0;
+
+      // Валидация обязательных полей
+      if (!full_name || !email || !phone || !delivery_address || !dateRaw || !delivery_interval) {
+        showNotification('Заполните все обязательные поля', 'error');
+        return;
+      }
+
+      // Преобразуем дату в формат API: dd.mm.yyyy
+      const delivery_date = formatDateForApi(dateRaw);
+
+      const delivery = calcDelivery(dateRaw, delivery_interval);
+      const goodsTotal = cartGoods.reduce((sum, g) => {
+        const p = (g.discount_price && g.discount_price < g.actual_price)
+          ? g.discount_price : g.actual_price;
+        return sum + p;
+      }, 0);
+
+      const orderData = {
+        full_name,
+        email,
+        phone,
+        delivery_address,
+        delivery_date,       // dd.mm.yyyy
+        delivery_interval,   // например "18:00-22:00"
+        comment,
+        subscribe,
+        good_ids: cartGoods.map(g => g.id),
+        // total_price не передаём — сервер посчитает сам
+      };
+
+      const btn = document.getElementById('submit-order');
+      btn.disabled = true;
+      btn.textContent = 'Оформляем...';
+
+      try {
+        await createOrder(orderData);
+        clearCart();
+        showNotification('Заказ успешно оформлен! Спасибо за покупку 🎉', 'success');
+        setTimeout(() => { window.location.href = 'index.html'; }, 1800);
+      } catch (err) {
+        showNotification('Ошибка при оформлении заказа. Попробуйте ещё раз.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Оформить заказ';
+        console.error(err);
+      }
+    };
+  </script>
+
+</body>
+</html>
